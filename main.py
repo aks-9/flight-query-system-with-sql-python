@@ -1,6 +1,8 @@
 import flights_data
 from datetime import datetime
 import sqlalchemy
+import csv
+
 
 IATA_LENGTH = 3
 
@@ -70,31 +72,64 @@ def flights_by_date():
 
 def print_results(results):
     """
-    Get a list of flight results (List of dictionary-like objects from SQLAachemy).
+    Get a list of flight results (List of dictionary-like objects from SQLAlchemy).
     Even if there is one result, it should be provided in a list.
-    Each object *has* to contain the columns:
-    FLIGHT_ID, ORIGIN_AIRPORT, DESTINATION_AIRPORT, AIRLINE, and DELAY.
     """
     print(f"Got {len(results)} results.")
+
+    if not results:
+        return
+
     for result in results:
-        # turn result into dictionary
         result = result._mapping
 
-        # Check that all required columns are in place
         try:
-            delay = int(result['DELAY']) if result['DELAY'] else 0  # If delay columns is NULL, set it to 0
+            delay = int(result['DELAY']) if result['DELAY'] else 0
             origin = result['ORIGIN_AIRPORT']
             dest = result['DESTINATION_AIRPORT']
             airline = result['AIRLINE']
-        except (ValueError, sqlalchemy.exc.SQLAlchemyError) as e:
-            print("Error showing results: ", e)
+        except Exception as e:
+            print("Error showing results:", e)
             return
 
-        # Different prints for delayed and non-delayed flights
-        if delay and delay > 0:
+        if delay >= 20:
             print(f"{result['ID']}. {origin} -> {dest} by {airline}, Delay: {delay} Minutes")
         else:
             print(f"{result['ID']}. {origin} -> {dest} by {airline}")
+
+    # -----------------------------
+    # NEW: Ask to export to CSV
+    # -----------------------------
+    export = input("\nWould you like to export this data to a CSV file? (y/n): ").lower()
+
+    if export == "y":
+        filename = input("Enter filename (e.g. flights.csv): ")
+
+        with open(filename, mode="w", newline="") as file:
+            writer = csv.writer(file)
+
+            # Write header row
+            writer.writerow([
+                "ID",
+                "ORIGIN_AIRPORT",
+                "DESTINATION_AIRPORT",
+                "AIRLINE",
+                "DELAY"
+            ])
+
+            # Write data rows
+            for result in results:
+                result = result._mapping
+                writer.writerow([
+                    result["ID"],
+                    result["ORIGIN_AIRPORT"],
+                    result["DESTINATION_AIRPORT"],
+                    result["AIRLINE"],
+                    result["DELAY"]
+                ])
+
+        print(f"Data successfully exported to '{filename}'")
+
 
 
 def show_menu_and_get_input():
